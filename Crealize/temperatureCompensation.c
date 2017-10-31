@@ -1,55 +1,55 @@
 //*****************************************************************************
 //		Copyright (C), 1993-2013, zhejiang supcon instrument Co., Ltd.
 //
-//		ÎÄ ¼ş Ãû£º			TemperatureCompensation.c
+//		æ–‡ ä»¶ åï¼š			TemperatureCompensation.c
 //
-//		¹¦    ÄÜ£º			ÎÂ¶È²¹³¥ÎÄ¼ş
-//      Ëµ    Ã÷£º          ÃÜ¶Èµ¥Î»Îªg/m3»òkg/L
+//		åŠŸ    èƒ½ï¼š			æ¸©åº¦è¡¥å¿æ–‡ä»¶
+//      è¯´    æ˜ï¼š          å¯†åº¦å•ä½ä¸ºg/m3æˆ–kg/L
 //
-//		°æ    ±¾£º			V1.00£b
-//		×÷    Õß£º		    Îâ¾²³¬
-//		´´½¨ÈÕÆÚ£º			2017.10.26
+//		ç‰ˆ    æœ¬ï¼š			V1.00ï¿½b
+//		ä½œ    è€…ï¼š		    å´é™è¶…
+//		åˆ›å»ºæ—¥æœŸï¼š			2017.10.26
 //
-//		ĞŞ¸Ä´ÎÊı£º
-//		ĞŞ¸ÄÊ±¼ä£º
-//		ĞŞ¸ÄÄÚÈİ£º
-//		ĞŞ ¸Ä Õß£º
+//		ä¿®æ”¹æ¬¡æ•°ï¼š
+//		ä¿®æ”¹æ—¶é—´ï¼š
+//		ä¿®æ”¹å†…å®¹ï¼š
+//		ä¿® æ”¹ è€…ï¼š
 //*****************************************************************************
 
 /**
-* °üº¬¿âÍ·ÎÄ¼ş
+* åŒ…å«åº“å¤´æ–‡ä»¶
 */
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 
 /**
-* °üº¬ÄÚ²¿Í·ÎÄ¼ş
+* åŒ…å«å†…éƒ¨å¤´æ–‡ä»¶
 */
 #include "temperatureCompensation.h"
 
 /**
-* ÄÚ²¿ºê¶¨Òå
+* å†…éƒ¨å®å®šä¹‰
 */
 #define DBG_PRINT  printf
 
-//²é±íÇøÓòÇø·Ö
-#define     RAW_OIL          (0x10)     //Ô­ÓÍ
-#define     PETROL           (0x11)     //ÆûÓÍ
-#define     UNDUE_OIL        (0x12)     //¹ı¶ÉÇø
-#define     SPACE_OIL        (0x13)     //º½Ãº
-#define     DIESEL_OIL       (0x14)     //²ñÓÍ
-#define     LUBE_OIL         (0x15)     //Èó»¬ÓÍ
+//æŸ¥è¡¨åŒºåŸŸåŒºåˆ†
+#define     RAW_OIL          (0x10)     //åŸæ²¹
+#define     PETROL           (0x11)     //æ±½æ²¹
+#define     UNDUE_OIL        (0x12)     //è¿‡æ¸¡åŒº
+#define     SPACE_OIL        (0x13)     //èˆªç…¤
+#define     DIESEL_OIL       (0x14)     //æŸ´æ²¹
+#define     LUBE_OIL         (0x15)     //æ¶¦æ»‘æ²¹
 
-#define     ITER_PRECISION         (0.000001)  //VCF¼ÆËãÊ±µÄµü´ú¾«¶È
-#define     ITER_MAX                99        //µü´ú×î´ó´ÎÊı
+#define     ITER_PRECISION         (0.000001)  //VCFè®¡ç®—æ—¶çš„è¿­ä»£ç²¾åº¦
+#define     ITER_MAX                99        //è¿­ä»£æœ€å¤§æ¬¡æ•°
 
 
 /******************************************************************************************
  * @fn           static double getBuChang(float realTemp, float stdTemp)
- * @Description  »ñµÃ²¹³¥ÏµÊı
- * @Parameters   float realTemp£ºÊµ¼ÊÎÂ¶È
-                 float stdTemp£º±ê×¼ÎÂ¶È
+ * @Description  è·å¾—è¡¥å¿ç³»æ•°
+ * @Parameters   float realTempï¼šå®é™…æ¸©åº¦
+                 float stdTempï¼šæ ‡å‡†æ¸©åº¦
  * @Rerurn
  * @Notes
  * @Author       WYB
@@ -69,9 +69,9 @@ static double getComModulus(float realTemp, float stdTemp)
 
 /******************************************************************************************
  * @fn           static double getAlpha(uint8_t oilType, double density)
- * @Description  ¼ÆËã°¢¶û·¨ÏµÊı
- * @Parameters   uint8_t oilType £ºÓÍÆ·ÀàĞÍ
-                 double density£ºÃÜ¶È
+ * @Description  è®¡ç®—é˜¿å°”æ³•ç³»æ•°
+ * @Parameters   uint8_t oilType ï¼šæ²¹å“ç±»å‹
+                 double densityï¼šå¯†åº¦
  * @Rerurn
  * @Notes
  * @Author       WYB
@@ -84,32 +84,32 @@ static double getAlpha(uint8_t oilType, double density)
 
 	switch(oilType)
 	{
-		case RAW_OIL:  //Ô­ÓÍ
+		case RAW_OIL:  //åŸæ²¹
 				K0 = 613.9723;
 				K1 = 0;
 				A = 0;
 			break;
-		case PETROL:   //ÆûÓÍ
+		case PETROL:   //æ±½æ²¹
 				K0 = 346.4228;
 				K1 = 0.4388;
 				A = 0;
 			break;
-		case UNDUE_OIL:   //¹ı¶ÉÇø
+		case UNDUE_OIL:   //è¿‡æ¸¡åŒº
 				K0 = 2680.321;
 				K1 = 0;
 				A = -0.00336312;
 			break;
-		case SPACE_OIL:   //º½Ãº
+		case SPACE_OIL:   //èˆªç…¤
 				K0 = 594.5418;
 				K1 = 0;
 				A = 0;
 			break;
-		case DIESEL_OIL:  //²ñÓÍ
+		case DIESEL_OIL:  //æŸ´æ²¹
 				K0 = 186.9696;
 				K1 = 0.4862;
 				A = 0;
 			break;
-		case LUBE_OIL:    //Èó»¬ÓÍ
+		case LUBE_OIL:    //æ¶¦æ»‘æ²¹
 				K0 = 0;
 				K1 = 0.6278;
 				A = 0;
@@ -163,7 +163,7 @@ static uint8_t convToCompenChart( uint8_t oil )
         }
         case PRODUCT_OIL_TYPE:
         {
-            ret = PETROL;       //ÈôÊ¹ÓÃ³ÉÆ·ÓÍ£¬ÏÈ¼ÆËãÆûÓÍµÄ15¡æ±ê×¼ÃÜ¶È£¬ÔÙºóĞøÔÙÑ¡Ôñ±í¸ñ
+            ret = PETROL;       //è‹¥ä½¿ç”¨æˆå“æ²¹ï¼Œå…ˆè®¡ç®—æ±½æ²¹çš„15â„ƒæ ‡å‡†å¯†åº¦ï¼Œå†åç»­å†é€‰æ‹©è¡¨æ ¼
             break;
         }
         case LUBE_OIL_TYPE:
@@ -180,7 +180,7 @@ static uint8_t convToCompenChart( uint8_t oil )
     return ret;
 }
 
-/** \brief ¸ù¾İÆûÓÍµÄ15¡æ±ê×¼ÃÜ¶ÈÈ·¶¨²¹³¥±í¸ñ
+/** \brief æ ¹æ®æ±½æ²¹çš„15â„ƒæ ‡å‡†å¯†åº¦ç¡®å®šè¡¥å¿è¡¨æ ¼
  *
  * \param den15 double
  * \return uint8_t
@@ -190,19 +190,19 @@ static uint8_t getChartForProductOil( double den15 )
 {
     uint8_t ret = 0;
 
-    if( (den15>=838.3) && (den15<1163.5) )          //²ñÓÍ
+    if( (den15>=838.3) && (den15<1163.5) )          //æŸ´æ²¹
     {
         ret = DIESEL_OIL;
     }
-    else if( (den15>=787.5) && (den15<838.3) )      //º½Ãº
+    else if( (den15>=787.5) && (den15<838.3) )      //èˆªç…¤
     {
         ret = SPACE_OIL;
     }
-    else if( (den15>=770.3) && (den15<787.5) )      //¹ı¶ÉÇø
+    else if( (den15>=770.3) && (den15<787.5) )      //è¿‡æ¸¡åŒº
     {
         ret = UNDUE_OIL;
     }
-    else if( (den15>=610.6) && (den15<770.3) )      //ÆûÓÍ
+    else if( (den15>=610.6) && (den15<770.3) )      //æ±½æ²¹
     {
         ret = PETROL;
     }
@@ -213,10 +213,10 @@ static uint8_t getChartForProductOil( double den15 )
 
 /******************************************************************************************
  * @fn           static double getRealRou15(uint_8 oilType, double tstDen, double tstTemp )
- * @Description  µü´ú·¨Çó½â15¡æÊ±µÄ±ê×¼ÃÜ¶È
- * @Parameters   uint_8 oilType£ºÓÍÆ·ÀàĞÍ
-                 double tstDen£ºÊµÑéÃÜ¶È£¬ÊÓÃÜ¶È
-                 double tstTemp£ºÊµÑéÎÂ¶È
+ * @Description  è¿­ä»£æ³•æ±‚è§£15â„ƒæ—¶çš„æ ‡å‡†å¯†åº¦
+ * @Parameters   uint_8 oilTypeï¼šæ²¹å“ç±»å‹
+                 double tstDenï¼šå®éªŒå¯†åº¦ï¼Œè§†å¯†åº¦
+                 double tstTempï¼šå®éªŒæ¸©åº¦
  * @Rerurn
  * @Notes
  * @Author       WYB
@@ -257,11 +257,11 @@ static double getRealRou15(uint8_t oilType, double tstDen, double tstTemp )
 
 /******************************************************************************************
  * @fn           static double getRealRou20(uint8_t oilType, double rou15)
- * @Description  »ñÈ¡20¡æÓÍÆ·ÃÜ¶È
- * @Parameters   uint8_t oilType£ºÓÍÆ·ÀàĞÍ
-                 double rou15£ºÓÍÆ·15¡æµÄ±ê×¼ÃÜ¶È
+ * @Description  è·å–20â„ƒæ²¹å“å¯†åº¦
+ * @Parameters   uint8_t oilTypeï¼šæ²¹å“ç±»å‹
+                 double rou15ï¼šæ²¹å“15â„ƒçš„æ ‡å‡†å¯†åº¦
 
- * @Rerurn       20¡æ±ê×¼ÃÜ¶È£¬µ¥¾«¶È¸¡µãÊı¾İ
+ * @Rerurn       20â„ƒæ ‡å‡†å¯†åº¦ï¼Œå•ç²¾åº¦æµ®ç‚¹æ•°æ®
  * @Notes
  * @Author       WYB
  * @Creatdate    2016-09-22
@@ -272,10 +272,10 @@ static double getRealRou20(uint8_t oilType, double rou15)
 	double alpha;
 	double VCF15;
 
-	alpha = getAlpha(oilType, rou15);       //TODO´Ë´¦ÎªÖØ¸´¼ÆËã
+	alpha = getAlpha(oilType, rou15);       //TODOæ­¤å¤„ä¸ºé‡å¤è®¡ç®—
 	VCF15 = getExp(alpha,(20-15));
 	rou20 = rou15 * VCF15;
-	DBG_PRINT("-->getRealRou20:rou20=%f!\n",rou20);
+	DBG_PRINT("-->getRealRou20:Raw rou20=%f!\n",rou20);
 	return rou20;
 }
 
@@ -292,7 +292,7 @@ static double getVCF20( uint8_t type, double temper, double den15, double den20 
 {
     double ret, alpha;
 
-    alpha = getAlpha(type, den15);    //TODO´Ë´¦ÎªÖØ¸´¼ÆËã
+    alpha = getAlpha(type, den15);    //TODOæ­¤å¤„ä¸ºé‡å¤è®¡ç®—
     ret = den15*getExp(alpha,(temper-15));
     ret = ret/den20;
 
@@ -317,13 +317,13 @@ uint8_t CalCompenDensity( uint8_t oilKind, double refDensity, double refTemper, 
     double retDen, retVCF20;
     uint8_t ret = 0, compenChart;
 
-    //¶ÔÓÍÆ·½øĞĞ¼ì²é
+    //å¯¹æ²¹å“è¿›è¡Œæ£€æŸ¥
     if( (oilKind < CRUDE_OIL_TYPE) || (oilKind > LUBE_OIL_TYPE) )
     {
         return ret;
     }
     compenChart = convToCompenChart( oilKind );
-    if( 0 == compenChart )  //ÓÍÀàĞÍÓĞÎó
+    if( 0 == compenChart )  //æ²¹ç±»å‹æœ‰è¯¯
     {
         return ret;
     }
@@ -332,7 +332,7 @@ uint8_t CalCompenDensity( uint8_t oilKind, double refDensity, double refTemper, 
     {
         den15 = getRealRou15( compenChart, refDensity, refTemper );
         compenChart = getChartForProductOil( den15 );
-        if( 0 == compenChart )  //³ÉÆ·ÓÍÃÜ¶È¿Õ¼äÓĞÎó
+        if( 0 == compenChart )  //æˆå“æ²¹å¯†åº¦ç©ºé—´æœ‰è¯¯
         {
             return ret;
         }
@@ -342,7 +342,7 @@ uint8_t CalCompenDensity( uint8_t oilKind, double refDensity, double refTemper, 
     retDen = getRealRou20( compenChart, den15 );
     retVCF20 = getVCF20( compenChart, realTemper, den15, retDen );
 
-    *pRetDensity = retDen*getComModulus( 15, 20 );  //¼ÆËã20¶È±ê×¼ÃÜ¶ÈÕæÖµ;
+    *pRetDensity = retDen*getComModulus( 15, 20 );  //è®¡ç®—20åº¦æ ‡å‡†å¯†åº¦çœŸå€¼;
     *pVCF20 = retVCF20;
     ret = 1;
 
